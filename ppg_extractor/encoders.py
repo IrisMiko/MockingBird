@@ -27,10 +27,7 @@ class RNNP(torch.nn.Module):
         super(RNNP, self).__init__()
         bidir = typ[0] == "b"
         for i in six.moves.range(elayers):
-            if i == 0:
-                inputdim = idim
-            else:
-                inputdim = hdim
+            inputdim = idim if i == 0 else hdim
             rnn = torch.nn.LSTM(inputdim, cdim, dropout=dropout, num_layers=1, bidirectional=bidir,
                                 batch_first=True) if "lstm" in typ \
                 else torch.nn.GRU(inputdim, cdim, dropout=dropout, num_layers=1, bidirectional=bidir, batch_first=True)
@@ -56,7 +53,7 @@ class RNNP(torch.nn.Module):
         :return: batch of hidden state sequences (B, Tmax, hdim)
         :rtype: torch.Tensor
         """
-        logging.debug(self.__class__.__name__ + ' input lengths: ' + str(ilens))
+        logging.debug(f'{self.__class__.__name__} input lengths: {str(ilens)}')
         elayer_states = []
         for layer in six.moves.range(self.elayers):
             xs_pack = pack_padded_sequence(xs_pad, ilens, batch_first=True, enforce_sorted=False)
@@ -73,8 +70,10 @@ class RNNP(torch.nn.Module):
                 ys_pad = ys_pad[:, ::sub]
                 ilens = [int(i + 1) // sub for i in ilens]
             # (sum _utt frame_utt) x dim
-            projected = getattr(self, 'bt' + str(layer)
-                                )(ys_pad.contiguous().view(-1, ys_pad.size(2)))
+            projected = getattr(self, f'bt{str(layer)}')(
+                ys_pad.contiguous().view(-1, ys_pad.size(2))
+            )
+
             if layer == self.elayers - 1:
                 xs_pad = projected.view(ys_pad.size(0), ys_pad.size(1), -1)
             else:
@@ -116,7 +115,7 @@ class RNN(torch.nn.Module):
         :return: batch of hidden state sequences (B, Tmax, eprojs)
         :rtype: torch.Tensor
         """
-        logging.debug(self.__class__.__name__ + ' input lengths: ' + str(ilens))
+        logging.debug(f'{self.__class__.__name__} input lengths: {str(ilens)}')
         xs_pack = pack_padded_sequence(xs_pad, ilens, batch_first=True)
         self.nbrnn.flatten_parameters()
         if prev_state is not None and self.nbrnn.bidirectional:
@@ -159,10 +158,7 @@ class VGG2L(torch.nn.Module):
 
         self.in_channel = in_channel
         self.downsample = downsample
-        if downsample:
-            self.stride = 2
-        else:
-            self.stride = 1
+        self.stride = 2 if downsample else 1
 
     def forward(self, xs_pad, ilens, **kwargs):
         """VGG2L forward
@@ -172,7 +168,7 @@ class VGG2L(torch.nn.Module):
         :return: batch of padded hidden state sequences (B, Tmax // 4, 128 * D // 4) if downsample
         :rtype: torch.Tensor
         """
-        logging.debug(self.__class__.__name__ + ' input lengths: ' + str(ilens))
+        logging.debug(f'{self.__class__.__name__} input lengths: {str(ilens)}')
 
         # x: utt x frame x dim
         # xs_pad = F.pad_sequence(xs_pad)
@@ -232,21 +228,20 @@ class Encoder(torch.nn.Module):
                                                 RNNP(get_vgg2l_odim(idim, in_channel=in_channel), elayers, eunits,
                                                      eprojs,
                                                      subsample, dropout, typ=typ)])
-                logging.info('Use CNN-VGG + ' + typ.upper() + 'P for encoder')
+                logging.info(f'Use CNN-VGG + {typ.upper()}P for encoder')
             else:
                 self.enc = torch.nn.ModuleList([VGG2L(in_channel),
                                                 RNN(get_vgg2l_odim(idim, in_channel=in_channel), elayers, eunits,
                                                     eprojs,
                                                     dropout, typ=typ)])
-                logging.info('Use CNN-VGG + ' + typ.upper() + ' for encoder')
+                logging.info(f'Use CNN-VGG + {typ.upper()} for encoder')
+        elif etype[-1] == "p":
+            self.enc = torch.nn.ModuleList(
+                [RNNP(idim, elayers, eunits, eprojs, subsample, dropout, typ=typ)])
+            logging.info(f'{typ.upper()} with every-layer projection for encoder')
         else:
-            if etype[-1] == "p":
-                self.enc = torch.nn.ModuleList(
-                    [RNNP(idim, elayers, eunits, eprojs, subsample, dropout, typ=typ)])
-                logging.info(typ.upper() + ' with every-layer projection for encoder')
-            else:
-                self.enc = torch.nn.ModuleList([RNN(idim, elayers, eunits, eprojs, dropout, typ=typ)])
-                logging.info(typ.upper() + ' without projection for encoder')
+            self.enc = torch.nn.ModuleList([RNN(idim, elayers, eunits, eprojs, dropout, typ=typ)])
+            logging.info(f'{typ.upper()} without projection for encoder')
 
     def forward(self, xs_pad, ilens, prev_states=None):
         """Encoder forward
@@ -295,4 +290,4 @@ def encoder_for(args, idim, subsample):
             enc_list.append(enc)
         return enc_list
     else:
-        raise ValueError("Number of encoders needs to be more than one. {}".format(num_encs))
+        raise ValueError(f"Number of encoders needs to be more than one. {num_encs}")

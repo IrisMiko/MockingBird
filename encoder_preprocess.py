@@ -4,9 +4,10 @@ from pathlib import Path
 import argparse
 
 if __name__ == "__main__":
+
     class MyFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter):
         pass
-    
+
     parser = argparse.ArgumentParser(
         description="Preprocesses audio files from datasets, encodes them as mel spectrograms and "
                     "writes them to the disk. This will allow you to train the encoder. The "
@@ -57,5 +58,5 @@ if __name__ == "__main__":
     }
     args = vars(args)
     for dataset in args.pop("datasets"):
-        print("Preprocessing %s" % dataset)
+        print(f"Preprocessing {dataset}")
         preprocess_func[dataset](**args)

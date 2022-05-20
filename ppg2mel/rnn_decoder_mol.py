@@ -109,14 +109,14 @@ class Decoder(nn.Module):
 
     def get_go_frame(self, memory):
         B = memory.size(0)
-        go_frame = torch.zeros((B, self.num_mels), dtype=torch.float,
-                               device=memory.device)
-        return go_frame
+        return torch.zeros(
+            (B, self.num_mels), dtype=torch.float, device=memory.device
+        )
 
     def initialize_decoder_states(self, memory, mask):
         device = next(self.parameters()).device
         B = memory.size(0)
-        
+
         # attention rnn states
         self.attention_hidden = torch.zeros(
             (B, self.attention_rnn_dim), device=device)
@@ -126,7 +126,7 @@ class Decoder(nn.Module):
         # decoder rnn states
         self.decoder_hiddens = []
         self.decoder_cells = []
-        for i in range(self.num_decoder_rnn_layer):
+        for _ in range(self.num_decoder_rnn_layer):
             self.decoder_hiddens.append(
                 torch.zeros((B, self.decoder_rnn_dim),
                             device=device)
@@ -135,11 +135,6 @@ class Decoder(nn.Module):
                 torch.zeros((B, self.decoder_rnn_dim),
                             device=device)
             )
-        # self.decoder_hidden = torch.zeros(
-            # (B, self.decoder_rnn_dim), device=device)
-        # self.decoder_cell = torch.zeros(
-            # (B, self.decoder_rnn_dim), device=device)
-        
         self.attention_context =  torch.zeros(
             (B, self.enc_dim), device=device)
 
@@ -223,21 +218,18 @@ class Decoder(nn.Module):
         # [T//r + 1, B, num_mels]
         mel_inputs = torch.cat((go_frame, mel_inputs), dim=0)
         # [T//r + 1, B, prenet_dim]
-        decoder_inputs = self.prenet(mel_inputs) 
+        decoder_inputs = self.prenet(mel_inputs)
         # decoder_inputs_pitch = self.prenet_pitch(decoder_inputs__)
 
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths),
         )
-        
+
         self.attention_layer.init_states(memory)
         # self.attention_layer_pitch.init_states(memory_pitch)
 
         mel_outputs, alignments = [], []
-        if self.use_stop_tokens:
-            stop_outputs = []
-        else:
-            stop_outputs = None
+        stop_outputs = [] if self.use_stop_tokens else None
         while len(mel_outputs) < decoder_inputs.size(0) - 1:
             decoder_input = decoder_inputs[len(mel_outputs)]
             # decoder_input_pitch = decoder_inputs_pitch[len(mel_outputs)]
@@ -248,7 +240,7 @@ class Decoder(nn.Module):
             if self.concat_context_to_last:    
                 decoder_rnn_output = torch.cat(
                     (decoder_rnn_output, context), dim=1)
-                   
+
             mel_output = self.linear_projection(decoder_rnn_output)
             if self.use_stop_tokens:
                 stop_output = self.stop_layer(decoder_rnn_output)

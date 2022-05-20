@@ -67,9 +67,7 @@ def build_model(args):
     normalizer = UtteranceMVN(**args.normalize_conf)
     frontend = DefaultFrontend(**args.frontend_conf)
     encoder = ConformerEncoder(input_size=80, **args.encoder_conf)
-    model = PPGModel(frontend, normalizer, encoder)
-    
-    return model
+    return PPGModel(frontend, normalizer, encoder)
 
 
 def load_model(model_file, device=None):

@@ -24,7 +24,7 @@ class Postnet(nn.Module):
                     dilation=1, w_init_gain='tanh'),
                 nn.BatchNorm1d(hidden_dim)))
 
-        for i in range(1, num_layers - 1):
+        for _ in range(1, num_layers - 1):
             self.convolutions.append(
                 nn.Sequential(
                     Conv1d(

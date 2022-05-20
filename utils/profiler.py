@@ -13,15 +13,15 @@ class Profiler:
     def tick(self, name):
         if self.disabled:
             return
-        
+
         # Log the time needed to execute that function
-        if not name in self.logs:
+        if name not in self.logs:
             self.logs[name] = []
         if len(self.logs[name]) >= self.summarize_every:
             self.summarize()
             self.purge_logs()
         self.logs[name].append(timer() - self.last_tick)
-        
+
         self.reset_timer()
         
     def purge_logs(self):

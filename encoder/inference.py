@@ -58,10 +58,9 @@ def embed_frames_batch(frames_batch):
     """
     if _model is None:
         raise Exception("Model was not loaded. Call load_model() before inference.")
-    
+
     frames = torch.from_numpy(frames_batch).to(_device)
-    embed = _model.forward(frames).detach().cpu().numpy()
-    return embed
+    return _model.forward(frames).detach().cpu().numpy()
 
 
 def compute_partial_slices(n_samples, partial_utterance_n_frames=partials_n_frames,
@@ -92,16 +91,15 @@ def compute_partial_slices(n_samples, partial_utterance_n_frames=partials_n_fram
     """
     assert 0 <= overlap < 1
     assert 0 < min_pad_coverage <= 1
-    
-    if rate != None:
-        samples_per_frame = int((sampling_rate * mel_window_step / 1000))
-        n_frames = int(np.ceil((n_samples + 1) / samples_per_frame))
-        frame_step = int(np.round((sampling_rate / rate) / samples_per_frame))
-    else: 
-        samples_per_frame = int((sampling_rate * mel_window_step / 1000))
+
+    samples_per_frame = int((sampling_rate * mel_window_step / 1000))
+    if rate is None: 
         n_frames = int(np.ceil((n_samples + 1) / samples_per_frame))
         frame_step = max(int(np.round(partial_utterance_n_frames * (1 - overlap))), 1)
 
+    else:
+        n_frames = int(np.ceil((n_samples + 1) / samples_per_frame))
+        frame_step = int(np.round((sampling_rate / rate) / samples_per_frame))
     assert 0 < frame_step, "The rate is too high"
     assert frame_step <= partials_n_frames, "The rate is too low, it should be %f at least" % \
         (sampling_rate / (samples_per_frame * partials_n_frames))
@@ -114,14 +112,14 @@ def compute_partial_slices(n_samples, partial_utterance_n_frames=partials_n_fram
         wav_range = mel_range * samples_per_frame
         mel_slices.append(slice(*mel_range))
         wav_slices.append(slice(*wav_range))
-        
+
     # Evaluate whether extra padding is warranted or not
     last_wav_range = wav_slices[-1]
     coverage = (n_samples - last_wav_range.start) / (last_wav_range.stop - last_wav_range.start)
     if coverage < min_pad_coverage and len(mel_slices) > 1:
         mel_slices = mel_slices[:-1]
         wav_slices = wav_slices[:-1]
-    
+
     return wav_slices, mel_slices
 
 

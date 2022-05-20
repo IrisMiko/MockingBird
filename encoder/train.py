@@ -23,54 +23,53 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         utterances_per_speaker,
         num_workers=8,
     )
-    
+
     # Setup the device on which to run the forward pass and the loss. These can be different, 
     # because the forward pass is faster on the GPU whereas the loss is often (depending on your
     # hyperparameters) faster on the CPU.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # FIXME: currently, the gradient is None if loss_device is cuda
     loss_device = torch.device("cpu")
-    
+
     # Create the model and the optimizer
     model = SpeakerEncoder(device, loss_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate_init)
     init_step = 1
-    
+
     # Configure file path for the model
-    state_fpath = models_dir.joinpath(run_id + ".pt")
-    backup_dir = models_dir.joinpath(run_id + "_backups")
+    state_fpath = models_dir.joinpath(f"{run_id}.pt")
+    backup_dir = models_dir.joinpath(f"{run_id}_backups")
 
     # Load any existing model
-    if not force_restart:
-        if state_fpath.exists():
-            print("Found existing model \"%s\", loading it and resuming training." % run_id)
-            checkpoint = torch.load(state_fpath)
-            init_step = checkpoint["step"]
-            model.load_state_dict(checkpoint["model_state"])
-            optimizer.load_state_dict(checkpoint["optimizer_state"])
-            optimizer.param_groups[0]["lr"] = learning_rate_init
-        else:
-            print("No model \"%s\" found, starting training from scratch." % run_id)
-    else:
+    if force_restart:
         print("Starting the training from scratch.")
+    elif state_fpath.exists():
+        print("Found existing model \"%s\", loading it and resuming training." % run_id)
+        checkpoint = torch.load(state_fpath)
+        init_step = checkpoint["step"]
+        model.load_state_dict(checkpoint["model_state"])
+        optimizer.load_state_dict(checkpoint["optimizer_state"])
+        optimizer.param_groups[0]["lr"] = learning_rate_init
+    else:
+        print("No model \"%s\" found, starting training from scratch." % run_id)
     model.train()
-    
+
     # Initialize the visualization environment
     vis = Visualizations(run_id, vis_every, server=visdom_server, disabled=no_visdom)
     vis.log_dataset(dataset)
     vis.log_params()
     device_name = str(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
     vis.log_implementation({"Device": device_name})
-    
+
     # Training loop
     profiler = Profiler(summarize_every=10, disabled=False)
     for step, speaker_batch in enumerate(loader, init_step):
         profiler.tick("Blocking, waiting for batch (threaded)")
-        
+
         # Forward pass
         inputs = torch.from_numpy(speaker_batch.data).to(device)
         sync(device)
-        profiler.tick("Data to %s" % device)
+        profiler.tick(f"Data to {device}")
         embeds = model(inputs)
         sync(device)
         profiler.tick("Forward pass")
@@ -86,11 +85,11 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         model.do_gradient_ops()
         optimizer.step()
         profiler.tick("Parameter update")
-        
+
         # Update visualizations
         # learning_rate = optimizer.param_groups[0]["lr"]
         vis.update(loss.item(), eer, step)
-        
+
         # Draw projections and save them to the backup folder
         if umap_every != 0 and step % umap_every == 0:
             print("Drawing and saving projections (step %d)" % step)
@@ -108,7 +107,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
                 "model_state": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
             }, state_fpath)
-            
+
         # Make a backup
         if backup_every != 0 and step % backup_every == 0:
             print("Making a backup (step %d)" % step)
@@ -119,5 +118,5 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
                 "model_state": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
             }, backup_fpath)
-            
+
         profiler.tick("Extras (visualizations, saving)")

@@ -164,7 +164,7 @@ class MultiSpkVcCollate():
         self.use_spk_dvec = use_spk_dvec
 
     def __call__(self, batch):
-        batch_size = len(batch)              
+        batch_size = len(batch)
         # Prepare different features 
         ppgs = [x[0] for x in batch]
         lf0_uvs = [x[1] for x in batch]
@@ -201,14 +201,7 @@ class MultiSpkVcCollate():
         if len(batch[0]) == 5:
             ret_tup = (ppgs_padded, lf0_uvs_padded, mels_padded, torch.LongTensor(ppg_lengths), \
                 torch.LongTensor(mel_lengths), spk_ids, stop_tokens)
-            if self.give_uttids:
-                return ret_tup + (fids, )
-            else:
-                return ret_tup
         else:
             ret_tup = (ppgs_padded, lf0_uvs_padded, mels_padded, torch.LongTensor(ppg_lengths), \
                 torch.LongTensor(mel_lengths), stop_tokens)
-            if self.give_uttids:
-                return ret_tup + (fids, )
-            else:
-                return ret_tup
+        return ret_tup + (fids, ) if self.give_uttids else ret_tup

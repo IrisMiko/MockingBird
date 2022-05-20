@@ -13,7 +13,7 @@ _device = None
 
 def load_checkpoint(filepath, device):
     assert os.path.isfile(filepath)
-    print("Loading '{}'".format(filepath))
+    print(f"Loading '{filepath}'")
     checkpoint_dict = torch.load(filepath, map_location=device)
     print("Complete.")
     return checkpoint_dict
@@ -25,7 +25,7 @@ def load_model(weights_fpath, config_fpath=None, verbose=True):
     if verbose:
         print("Building hifigan")
 
-    if config_fpath == None:
+    if config_fpath is None:
         config_fpath = "./vocoder/hifigan/config_16k_.json"
     with open(config_fpath) as f:
         data = f.read()

@@ -11,10 +11,8 @@ audio = api.model('Audio', {
 
 def generate(wav_path):
     with open(wav_path, "rb") as fwav:
-        data = fwav.read(1024)
-        while data:
+        while data := fwav.read(1024):
             yield data
-            data = fwav.read(1024)
 
 @api.route('/')
 class AudioList(Resource):
@@ -26,7 +24,7 @@ class AudioList(Resource):
         AUDIO_SAMPLES_DIR = current_app.config.get("AUDIO_SAMPLES_DIR")
         if os.path.isdir(AUDIO_SAMPLES_DIR):
             audio_samples = list(Path(AUDIO_SAMPLES_DIR).glob("*.wav"))
-        return list(a.name for a in audio_samples)
+        return [a.name for a in audio_samples]
 
 @api.route('/<name>')
 @api.param('name', 'The name of audio')

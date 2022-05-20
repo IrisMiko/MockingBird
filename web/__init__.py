@@ -79,7 +79,7 @@ def webApp():
             synthesizers_cache[synt_path] = current_synt
         else:
             current_synt = synthesizers_cache[synt_path]
-        print("using synthesizer model: " + str(synt_path))
+        print(f"using synthesizer model: {str(synt_path)}")
         # Load input wav
         if "upfile_b64" in request.form:
             wav_base64 = request.form["upfile_b64"]
@@ -89,18 +89,23 @@ def webApp():
         else:
             wav, sample_rate,  = librosa.load(request.files['file'])
         write("temp.wav", sample_rate, wav) #Make sure we get the correct wav
-        
+
         encoder_wav = encoder.preprocess_wav(wav, sample_rate)
         embed, _, _ = encoder.embed_utterance(encoder_wav, return_partials=True)
-        
+
         # Load input text
         texts = filter(None, request.form["text"].split("\n"))
         punctuation = '！，。、,' # punctuate and split/clean text
         processed_texts = []
         for text in texts:
-            for processed_text in re.sub(r'[{}]+'.format(punctuation), '\n', text).split('\n'):
-                if processed_text:
-                    processed_texts.append(processed_text.strip())
+            processed_texts.extend(
+                processed_text.strip()
+                for processed_text in re.sub(
+                    f'[{punctuation}]+', '\n', text
+                ).split('\n')
+                if processed_text
+            )
+
         texts = processed_texts
 
         # synthesize and vocode

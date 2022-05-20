@@ -140,16 +140,12 @@ def make_pad_mask(lengths, xs=None, length_dim=-1):
 
     """
     if length_dim == 0:
-        raise ValueError('length_dim cannot be 0: {}'.format(length_dim))
+        raise ValueError(f'length_dim cannot be 0: {length_dim}')
 
     if not isinstance(lengths, list):
         lengths = lengths.tolist()
-    bs = int(len(lengths))
-    if xs is None:
-        maxlen = int(max(lengths))
-    else:
-        maxlen = xs.size(length_dim)
-
+    bs = len(lengths)
+    maxlen = int(max(lengths)) if xs is None else xs.size(length_dim)
     seq_range = torch.arange(0, maxlen, dtype=torch.int64)
     seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
     seq_length_expand = seq_range_expand.new(lengths).unsqueeze(-1)
@@ -334,24 +330,21 @@ def to_torch_tensor(x):
     """
     # If numpy, change to torch tensor
     if isinstance(x, np.ndarray):
-        if x.dtype.kind == 'c':
-            # Dynamically importing because torch_complex requires python3
-            from torch_complex.tensor import ComplexTensor
-            return ComplexTensor(x)
-        else:
+        if x.dtype.kind != 'c':
             return torch.from_numpy(x)
 
-    # If {'real': ..., 'imag': ...}, convert to ComplexTensor
+        # Dynamically importing because torch_complex requires python3
+        from torch_complex.tensor import ComplexTensor
+        return ComplexTensor(x)
     elif isinstance(x, dict):
         # Dynamically importing because torch_complex requires python3
         from torch_complex.tensor import ComplexTensor
 
         if 'real' not in x or 'imag' not in x:
-            raise ValueError("has 'real' and 'imag' keys: {}".format(list(x)))
+            raise ValueError(f"has 'real' and 'imag' keys: {list(x)}")
         # Relative importing because of using python3 syntax
         return ComplexTensor(x['real'], x['imag'])
 
-    # If torch.Tensor, as it is
     elif isinstance(x, torch.Tensor):
         return x
 
@@ -393,9 +386,12 @@ def get_subsample(train_args, mode, arch):
         logging.info('subsample: ' + ' '.join([str(x) for x in subsample]))
         return subsample
 
-    elif (mode == 'asr' and arch in ('rnn', 'rnn-t')) or \
-         (mode == 'mt' and arch == 'rnn') or \
-         (mode == 'st' and arch == 'rnn'):
+    elif (
+        mode == 'asr'
+        and arch in ('rnn', 'rnn-t')
+        or mode == 'st'
+        and arch == 'rnn'
+    ):
         subsample = np.ones(train_args.elayers + 1, dtype=np.int)
         if train_args.etype.endswith("p") and not train_args.etype.startswith("vgg"):
             ss = train_args.subsample.split("_")
@@ -436,14 +432,14 @@ def get_subsample(train_args, mode, arch):
         return subsample_list
 
     else:
-        raise ValueError('Invalid options: mode={}, arch={}'.format(mode, arch))
+        raise ValueError(f'Invalid options: mode={mode}, arch={arch}')
 
 
 def rename_state_dict(old_prefix: str, new_prefix: str, state_dict: Dict[str, torch.Tensor]):
     """Replace keys of old prefix with new prefix in state dict."""
     # need this list not to break the dict iterator
     old_keys = [k for k in state_dict if k.startswith(old_prefix)]
-    if len(old_keys) > 0:
+    if old_keys:
         logging.warning(f'Rename: {old_prefix} -> {new_prefix}')
     for k in old_keys:
         v = state_dict.pop(k)

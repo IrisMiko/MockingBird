@@ -141,19 +141,18 @@ class Solver(BaseSolver):
         self.load_ckpt()
 
     def exec(self):
-        self.verbose("Total training steps {}.".format(
-            human_format(self.max_step)))
+        self.verbose(f"Total training steps {human_format(self.max_step)}.")
 
         mel_loss = None
         n_epochs = 0
         # Set as current time
         self.timer.set()
-        
+
+        total_loss = 0
         while self.step < self.max_step:
             for data in self.train_dataloader:
                 # Pre-step: updata lr_rate and do zero_grad
                 lr_rate = self.optimizer.pre_step(self.step)
-                total_loss = 0
                 # data to device
                 ppgs, lf0_uvs, mels, in_lengths, \
                     out_lengths, spk_ids, stop_tokens = self.fetch_data(data)
@@ -165,7 +164,7 @@ class Solver(BaseSolver):
                     out_lengths,
                     lf0_uvs,
                     spk_ids
-                ) 
+                )
                 mel_loss, stop_loss = self.loss_criterion(
                     mel_outputs,
                     mel_outputs_postnet,
@@ -209,7 +208,7 @@ class Solver(BaseSolver):
         dev_loss, dev_mel_loss, dev_stop_loss = 0.0, 0.0, 0.0
 
         for i, data in enumerate(self.dev_dataloader):
-            self.progress('Valid step - {}/{}'.format(i+1, len(self.dev_dataloader)))
+            self.progress(f'Valid step - {i + 1}/{len(self.dev_dataloader)}')
             # Fetch data
             ppgs, lf0_uvs, mels, in_lengths, \
                 out_lengths, spk_ids, stop_tokens = self.fetch_data(data)
@@ -282,7 +281,7 @@ class Solver(BaseSolver):
                     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
                 fig_name = f"{self.att_ws_dir}/{fid}_step{self.step}.png"
                 fig.savefig(fig_name)
-                
+
         # Resume training
         self.model.train()
 
