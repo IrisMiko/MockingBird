@@ -27,7 +27,7 @@ def _pre_hook(
         Therefore, we remove the item "pe" from `state_dict` for backward compatibility.
 
     """
-    k = prefix + "pe"
+    k = f"{prefix}pe"
     if k in state_dict:
         state_dict.pop(k)
 
@@ -55,11 +55,10 @@ class PositionalEncoding(torch.nn.Module):
 
     def extend_pe(self, x):
         """Reset the positional encodings."""
-        if self.pe is not None:
-            if self.pe.size(1) >= x.size(1):
-                if self.pe.dtype != x.dtype or self.pe.device != x.device:
-                    self.pe = self.pe.to(dtype=x.dtype, device=x.device)
-                return
+        if self.pe is not None and self.pe.size(1) >= x.size(1):
+            if self.pe.dtype != x.dtype or self.pe.device != x.device:
+                self.pe = self.pe.to(dtype=x.dtype, device=x.device)
+            return
         pe = torch.zeros(x.size(1), self.d_model)
         if self.reverse:
             position = torch.arange(

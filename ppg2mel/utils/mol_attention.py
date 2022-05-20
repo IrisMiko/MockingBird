@@ -20,10 +20,7 @@ class MOLAttention(nn.Module):
             M: number of mixtures.
         """
         super().__init__()
-        if r < 1:
-            self.r = float(r)
-        else:
-            self.r = int(r)
+        self.r = float(r) if r < 1 else int(r)
         self.M = M
         self.score_mask_value = 0.0 # -float("inf")
         self.eps = 1e-5

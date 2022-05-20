@@ -35,16 +35,14 @@ def end_detect(ended_hyps, i, M=3, D_end=np.log(1 * np.exp(-10))):
     for m in six.moves.range(M):
         # get ended_hyps with their length is i - m
         hyp_length = i - m
-        hyps_same_length = [x for x in ended_hyps if len(x['yseq']) == hyp_length]
-        if len(hyps_same_length) > 0:
+        if hyps_same_length := [
+            x for x in ended_hyps if len(x['yseq']) == hyp_length
+        ]:
             best_hyp_same_length = sorted(hyps_same_length, key=lambda x: x['score'], reverse=True)[0]
             if best_hyp_same_length['score'] - best_hyp['score'] < D_end:
                 count += 1
 
-    if count == M:
-        return True
-    else:
-        return False
+    return count == M
 
 
 # TODO(takaaki-hori): add different smoothing methods
@@ -62,7 +60,10 @@ def label_smoothing_dist(odim, lsm_type, transcript=None, blank=0):
             trans_json = json.load(f)['utts']
 
     if lsm_type == 'unigram':
-        assert transcript is not None, 'transcript is required for %s label smoothing' % lsm_type
+        assert (
+            transcript is not None
+        ), f'transcript is required for {lsm_type} label smoothing'
+
         labelcount = np.zeros(odim)
         for k, v in trans_json.items():
             ids = np.array([int(n) for n in v['output'][0]['tokenid'].split()])
@@ -74,8 +75,7 @@ def label_smoothing_dist(odim, lsm_type, transcript=None, blank=0):
         labelcount[blank] = 0  # remove counts for blank
         labeldist = labelcount.astype(np.float32) / np.sum(labelcount)
     else:
-        logging.error(
-            "Error: unexpected label smoothing type: %s" % lsm_type)
+        logging.error(f"Error: unexpected label smoothing type: {lsm_type}")
         sys.exit()
 
     return labeldist
@@ -164,13 +164,13 @@ class ErrorCalculator(object):
             seq_hat, seq_true = [], []
             for idx in y_hat:
                 idx = int(idx)
-                if idx != -1 and idx != self.idx_blank and idx != self.idx_space:
-                    seq_hat.append(self.char_list[int(idx)])
+                if idx not in [-1, self.idx_blank, self.idx_space]:
+                    seq_hat.append(self.char_list[idx])
 
             for idx in y_true:
                 idx = int(idx)
-                if idx != -1 and idx != self.idx_blank and idx != self.idx_space:
-                    seq_true.append(self.char_list[int(idx)])
+                if idx not in [-1, self.idx_blank, self.idx_space]:
+                    seq_true.append(self.char_list[idx])
             if self.trans_type == "char":
                 hyp_chars = "".join(seq_hat)
                 ref_chars = "".join(seq_true)
@@ -178,12 +178,11 @@ class ErrorCalculator(object):
                 hyp_chars = " ".join(seq_hat)
                 ref_chars = " ".join(seq_true)
 
-            if len(ref_chars) > 0:
+            if ref_chars != '':
                 cers.append(editdistance.eval(hyp_chars, ref_chars))
                 char_ref_lens.append(len(ref_chars))
 
-        cer_ctc = float(sum(cers)) / sum(char_ref_lens) if cers else None
-        return cer_ctc
+        return float(sum(cers)) / sum(char_ref_lens) if cers else None
 
     def convert_to_char(self, ys_hat, ys_pad):
         """Convert index to character.

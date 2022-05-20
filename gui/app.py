@@ -20,19 +20,38 @@ VOC_MODELS_DIRT = "vocoder\\saved_models"
 TEMP_SOURCE_AUDIO = "wavs/temp_source.wav"
 TEMP_RESULT_AUDIO = "wavs/temp_result.wav"
 
-# Load local sample audio as options TODO: load dataset 
+# Load local sample audio as options TODO: load dataset
 if os.path.isdir(AUDIO_SAMPLES_DIR):
-    audio_input_selection = Enum('samples', list((file.name, file) for file in Path(AUDIO_SAMPLES_DIR).glob("*.wav")))
+    audio_input_selection = Enum(
+        'samples',
+        [(file.name, file) for file in Path(AUDIO_SAMPLES_DIR).glob("*.wav")],
+    )
+
 # Pre-Load models
 if os.path.isdir(SYN_MODELS_DIRT):    
-    synthesizers =  Enum('synthesizers', list((file.name, file) for file in Path(SYN_MODELS_DIRT).glob("**/*.pt")))
-    print("Loaded synthesizer models: " + str(len(synthesizers)))
+    synthesizers = Enum(
+        'synthesizers',
+        [(file.name, file) for file in Path(SYN_MODELS_DIRT).glob("**/*.pt")],
+    )
+
+    print(f"Loaded synthesizer models: {len(synthesizers)}")
 if os.path.isdir(ENC_MODELS_DIRT):    
-    encoders =  Enum('encoders', list((file.name, file) for file in Path(ENC_MODELS_DIRT).glob("**/*.pt")))
-    print("Loaded encoders models: " + str(len(encoders)))
+    encoders = Enum(
+        'encoders',
+        [(file.name, file) for file in Path(ENC_MODELS_DIRT).glob("**/*.pt")],
+    )
+
+    print(f"Loaded encoders models: {len(encoders)}")
 if os.path.isdir(VOC_MODELS_DIRT):    
-    vocoders =  Enum('vocoders', list((file.name, file) for file in Path(VOC_MODELS_DIRT).glob("**/*gan*.pt")))
-    print("Loaded vocoders models: " + str(len(synthesizers)))
+    vocoders = Enum(
+        'vocoders',
+        [
+            (file.name, file)
+            for file in Path(VOC_MODELS_DIRT).glob("**/*gan*.pt")
+        ],
+    )
+
+    print(f"Loaded vocoders models: {len(synthesizers)}")
 
 
 class Input(BaseModel):
@@ -96,9 +115,14 @@ def mocking_bird(input: Input) -> Output:
     punctuation = '！，。、,' # punctuate and split/clean text
     processed_texts = []
     for text in texts:
-        for processed_text in re.sub(r'[{}]+'.format(punctuation), '\n', text).split('\n'):
-            if processed_text:
-                processed_texts.append(processed_text.strip())
+        processed_texts.extend(
+            processed_text.strip()
+            for processed_text in re.sub(
+                f'[{punctuation}]+', '\n', text
+            ).split('\n')
+            if processed_text
+        )
+
     texts = processed_texts
 
     # synthesize and vocode

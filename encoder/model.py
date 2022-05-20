@@ -51,14 +51,11 @@ class SpeakerEncoder(nn.Module):
         # Pass the input through the LSTM layers and retrieve all outputs, the final hidden state
         # and the final cell state.
         out, (hidden, cell) = self.lstm(utterances, hidden_init)
-        
+
         # We take only the hidden state of the last layer
         embeds_raw = self.relu(self.linear(hidden[-1]))
-        
-        # L2-normalize it
-        embeds = embeds_raw / (torch.norm(embeds_raw, dim=1, keepdim=True) + 1e-5)        
 
-        return embeds
+        return embeds_raw / (torch.norm(embeds_raw, dim=1, keepdim=True) + 1e-5)
     
     def similarity_matrix(self, embeds):
         """

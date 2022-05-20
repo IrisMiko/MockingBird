@@ -39,8 +39,8 @@ class BaseSolver():
                 # By default, exp is named after config file
                 self.exp_name = paras.config.split('/')[-1].replace('.yaml', '')
             if mode == 'train':
-                self.exp_name += '_seed{}'.format(paras.seed)
-                    
+                self.exp_name += f'_seed{paras.seed}'
+                                
 
         if mode == 'train':
             # Filepath setup
@@ -59,7 +59,7 @@ class BaseSolver():
             self.valid_step = config.hparas.valid_step
             self.max_step = config.hparas.max_step
 
-            self.verbose('Exp. name : {}'.format(self.exp_name))
+            self.verbose(f'Exp. name : {self.exp_name}')
             self.verbose('Loading data... large corpus may took a while.')
 
         # elif mode == 'test':
@@ -85,7 +85,7 @@ class BaseSolver():
         grad_norm = torch.nn.utils.clip_grad_norm_(
             self.model.parameters(), self.GRAD_CLIP)
         if math.isnan(grad_norm):
-            self.verbose('Error : grad norm is NaN @ step '+str(self.step))
+            self.verbose(f'Error : grad norm is NaN @ step {str(self.step)}')
         else:
             self.optimizer.step()
         self.timer.cnt('bw')
@@ -93,40 +93,43 @@ class BaseSolver():
 
     def load_ckpt(self):
         ''' Load ckpt if --load option is specified '''
-        if self.paras.load is not None:
-            if self.paras.warm_start:
-                self.verbose(f"Warm starting model from checkpoint {self.paras.load}.")
-                ckpt = torch.load(
-                    self.paras.load, map_location=self.device if self.mode == 'train'
-                                                        else 'cpu')
-                model_dict = ckpt['model']
-                if len(self.config.model.ignore_layers) > 0:
-                    model_dict = {k:v for k, v in model_dict.items()
-                                  if k not in self.config.model.ignore_layers}
-                    dummy_dict = self.model.state_dict()
-                    dummy_dict.update(model_dict)
-                    model_dict = dummy_dict
-                self.model.load_state_dict(model_dict)
-            else:
-                # Load weights
-                ckpt = torch.load(
-                    self.paras.load, map_location=self.device if self.mode == 'train'
-                                                else 'cpu')
-                self.model.load_state_dict(ckpt['model'])
+        if self.paras.load is None:
+            return
+        if self.paras.warm_start:
+            self.verbose(f"Warm starting model from checkpoint {self.paras.load}.")
+            ckpt = torch.load(
+                self.paras.load, map_location=self.device if self.mode == 'train'
+                                                    else 'cpu')
+            model_dict = ckpt['model']
+            if len(self.config.model.ignore_layers) > 0:
+                model_dict = {k:v for k, v in model_dict.items()
+                              if k not in self.config.model.ignore_layers}
+                dummy_dict = self.model.state_dict()
+                dummy_dict.update(model_dict)
+                model_dict = dummy_dict
+            self.model.load_state_dict(model_dict)
+        else:
+            # Load weights
+            ckpt = torch.load(
+                self.paras.load, map_location=self.device if self.mode == 'train'
+                                            else 'cpu')
+            self.model.load_state_dict(ckpt['model'])
 
                 # Load task-dependent items
-                if self.mode == 'train':
-                    self.step = ckpt['global_step']
-                    self.optimizer.load_opt_state_dict(ckpt['optimizer'])
-                    self.verbose('Load ckpt from {}, restarting at step {}'.format(
-                        self.paras.load, self.step))
-                else:
-                    for k, v in ckpt.items():
-                        if type(v) is float:
-                            metric, score = k, v
-                    self.model.eval()
-                    self.verbose('Evaluation target = {} (recorded {} = {:.2f} %)'.format(
-                        self.paras.load, metric, score))
+            if self.mode == 'train':
+                self.step = ckpt['global_step']
+                self.optimizer.load_opt_state_dict(ckpt['optimizer'])
+                self.verbose(
+                    f'Load ckpt from {self.paras.load}, restarting at step {self.step}'
+                )
+
+            else:
+                for k, v in ckpt.items():
+                    if type(v) is float:
+                        metric, score = k, v
+                self.model.eval()
+                self.verbose('Evaluation target = {} (recorded {} = {:.2f} %)'.format(
+                    self.paras.load, metric, score))
 
     def verbose(self, msg):
         ''' Verbose function for print information to stdout'''
@@ -141,7 +144,7 @@ class BaseSolver():
         ''' Verbose function for updating progress on stdout (do not include newline) '''
         if self.paras.verbose:
             sys.stdout.write("\033[K")  # Clear line
-            print('[{}] {}'.format(human_format(self.step), msg), end='\r')
+            print(f'[{human_format(self.step)}] {msg}', end='\r')
 
     def write_log(self, log_name, log_dict):
         '''

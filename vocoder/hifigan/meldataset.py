@@ -33,13 +33,11 @@ def dynamic_range_decompression_torch(x, C=1):
 
 
 def spectral_normalize_torch(magnitudes):
-    output = dynamic_range_compression_torch(magnitudes)
-    return output
+    return dynamic_range_compression_torch(magnitudes)
 
 
 def spectral_de_normalize_torch(magnitudes):
-    output = dynamic_range_decompression_torch(magnitudes)
-    return output
+    return dynamic_range_decompression_torch(magnitudes)
 
 
 mel_basis = {}
@@ -55,7 +53,10 @@ def mel_spectrogram(y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin,
     global mel_basis, hann_window
     if fmax not in mel_basis:
         mel = librosa_mel_fn(sampling_rate, n_fft, num_mels, fmin, fmax)
-        mel_basis[str(fmax)+'_'+str(y.device)] = torch.from_numpy(mel).float().to(y.device)
+        mel_basis[f'{str(fmax)}_{str(y.device)}'] = (
+            torch.from_numpy(mel).float().to(y.device)
+        )
+
         hann_window[str(y.device)] = torch.hann_window(win_size).to(y.device)
 
     y = torch.nn.functional.pad(y.unsqueeze(1), (int((n_fft-hop_size)/2), int((n_fft-hop_size)/2)), mode='reflect')
@@ -66,7 +67,7 @@ def mel_spectrogram(y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin,
 
     spec = torch.sqrt(spec.pow(2).sum(-1)+(1e-9))
 
-    spec = torch.matmul(mel_basis[str(fmax)+'_'+str(y.device)], spec)
+    spec = torch.matmul(mel_basis[f'{str(fmax)}_{str(y.device)}'], spec)
     spec = spectral_normalize_torch(spec)
 
     return spec

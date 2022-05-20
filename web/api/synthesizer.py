@@ -11,7 +11,7 @@ synthesizer = api.model('Synthesizer', {
 synthesizers_cache = {}
 syn_models_dirt = "synthesizer/saved_models"
 synthesizers = list(Path(syn_models_dirt).glob("**/*.pt"))
-print("Loaded synthesizer models: " + str(len(synthesizers)))
+print(f"Loaded synthesizer models: {len(synthesizers)}")
 
 @api.route('/')
 class SynthesizerList(Resource):
@@ -19,5 +19,5 @@ class SynthesizerList(Resource):
     @api.marshal_list_with(synthesizer)
     def get(self):
         '''List all synthesizers'''
-        return list({"name": e.name, "path": str(e)} for e in synthesizers)
+        return [{"name": e.name, "path": str(e)} for e in synthesizers]
 

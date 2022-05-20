@@ -4,7 +4,7 @@ import yaml
 def load_hparams(filename):
     stream = open(filename, 'r')
     docs = yaml.safe_load_all(stream)
-    hparams_dict = dict()
+    hparams_dict = {}
     for doc in docs:
         for k, v in doc.items():
             hparams_dict[k] = v
@@ -13,10 +13,7 @@ def load_hparams(filename):
 def merge_dict(user, default):
     if isinstance(user, dict) and isinstance(default, dict):
         for k, v in default.items():
-            if k not in user:
-                user[k] = v
-            else:
-                user[k] = merge_dict(user[k], v)
+            user[k] = v if k not in user else merge_dict(user[k], v)
     return user
 
 class Dotdict(dict):
@@ -32,7 +29,7 @@ class Dotdict(dict):
     __delattr__ = dict.__delitem__
 
     def __init__(self, dct=None):
-        dct = dict() if not dct else dct
+        dct = dct or dict()
         for key, value in dct.items():
             if hasattr(value, 'keys'):
                 value = Dotdict(value)

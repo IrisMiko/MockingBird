@@ -14,7 +14,7 @@ def run_synthesis(in_dir, out_dir, model_dir, hparams):
     # This generates ground truth-aligned mels for vocoder training
     synth_dir = Path(out_dir).joinpath("mels_gta")
     synth_dir.mkdir(parents=True, exist_ok=True)
-    print(str(hparams))
+    print(hparams)
 
     # Check for GPU
     if torch.cuda.is_available():

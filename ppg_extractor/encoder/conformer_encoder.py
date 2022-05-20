@@ -83,7 +83,7 @@ class ConformerEncoder(torch.nn.Module):
     ):
         """Construct an Encoder object."""
         super().__init__()
-        
+
         self._output_size = attention_dim
         idim = input_size
 
@@ -96,7 +96,7 @@ class ConformerEncoder(torch.nn.Module):
             assert selfattention_layer_type == "rel_selfattn"
             pos_enc_class = RelPositionalEncoding
         else:
-            raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
+            raise ValueError(f"unknown pos_enc_layer: {pos_enc_layer_type}")
 
         if input_layer == "linear":
             self.embed = torch.nn.Sequential(
@@ -139,7 +139,7 @@ class ConformerEncoder(torch.nn.Module):
                 pos_enc_class(attention_dim, positional_dropout_rate)
             )
         else:
-            raise ValueError("unknown input_layer: " + input_layer)
+            raise ValueError(f"unknown input_layer: {input_layer}")
         self.normalize_before = normalize_before
         if positionwise_layer_type == "linear":
             positionwise_layer = PositionwiseFeedForward
@@ -185,7 +185,7 @@ class ConformerEncoder(torch.nn.Module):
                 attention_dropout_rate,
             )
         else:
-            raise ValueError("unknown encoder_attn_layer: " + selfattention_layer_type)
+            raise ValueError(f"unknown encoder_attn_layer: {selfattention_layer_type}")
 
         convolution_layer = ConvolutionModule
         convolution_layer_args = (attention_dim, cnn_module_kernel, activation)

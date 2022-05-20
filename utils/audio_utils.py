@@ -16,8 +16,7 @@ def _dynamic_range_compression_torch(x, C=1, clip_val=1e-5):
 
 
 def _spectral_normalize_torch(magnitudes):
-    output = _dynamic_range_compression_torch(magnitudes)
-    return output
+    return _dynamic_range_compression_torch(magnitudes)
 
 mel_basis = {}
 hann_window = {}
@@ -42,7 +41,10 @@ def mel_spectrogram(
     global mel_basis, hann_window
     if fmax not in mel_basis:
         mel = librosa_mel_fn(sampling_rate, n_fft, num_mels, fmin, fmax)
-        mel_basis[str(fmax)+'_'+str(y.device)] = torch.from_numpy(mel).float().to(y.device)
+        mel_basis[f'{str(fmax)}_{str(y.device)}'] = (
+            torch.from_numpy(mel).float().to(y.device)
+        )
+
         hann_window[str(y.device)] = torch.hann_window(win_size).to(y.device)
 
     y = torch.nn.functional.pad(y.unsqueeze(1), (int((n_fft-hop_size)/2), int((n_fft-hop_size)/2)), mode='reflect')
@@ -51,7 +53,7 @@ def mel_spectrogram(
     spec = torch.stft(y, n_fft, hop_length=hop_size, win_length=win_size, window=hann_window[str(y.device)],
                       center=center, pad_mode='reflect', normalized=False, onesided=True, return_complex=False)
     spec = torch.sqrt(spec.pow(2).sum(-1)+(1e-9))
-    mel_spec = torch.matmul(mel_basis[str(fmax)+'_'+str(y.device)], spec)
+    mel_spec = torch.matmul(mel_basis[f'{str(fmax)}_{str(y.device)}'], spec)
     mel_spec = _spectral_normalize_torch(mel_spec)
     if output_energy:
         energy = torch.norm(spec, dim=1)

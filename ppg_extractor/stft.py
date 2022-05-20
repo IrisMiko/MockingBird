@@ -21,10 +21,7 @@ class Stft(torch.nn.Module):
     ):
         super().__init__()
         self.n_fft = n_fft
-        if win_length is None:
-            self.win_length = n_fft
-        else:
-            self.win_length = win_length
+        self.win_length = n_fft if win_length is None else win_length
         self.hop_length = hop_length
         self.center = center
         self.pad_mode = pad_mode

@@ -160,16 +160,16 @@ class UI(QDialog):
                 output_devices.append(device["name"])
             except Exception as e:
                 # Log a warning only if the device is not an input
-                if not device["name"] in input_devices:
+                if device["name"] not in input_devices:
                     warn("Unsupported output device %s for the sample rate: %d \nError: %s" % (device["name"], sample_rate, str(e)))
 
-        if len(input_devices) == 0:
+        if not input_devices:
             self.log("No audio input device detected. Recording may not work.")
             self.audio_in_device = None
         else:
             self.audio_in_device = input_devices[0]
 
-        if len(output_devices) == 0:
+        if not output_devices:
             self.log("No supported output audio devices were found! Audio output may not work.")
             self.audio_out_devices_cb.addItems(["None"])
             self.audio_out_devices_cb.setDisabled(True)
@@ -270,7 +270,7 @@ class UI(QDialog):
             if datasets_root is not None:
                 datasets = [datasets_root.joinpath(d) for d in recognized_datasets]
                 datasets = [d.relative_to(datasets_root) for d in datasets if d.exists()]
-                self.browser_load_button.setDisabled(len(datasets) == 0)
+                self.browser_load_button.setDisabled(not datasets)
             if datasets_root is None or len(datasets) == 0:
                 msg = "Warning: you d" + ("id not pass a root directory for datasets as argument" \
                     if datasets_root is None else "o not have any of the recognized datasets" \
@@ -280,7 +280,7 @@ class UI(QDialog):
                        "can still use the toolbox by recording samples yourself." % \
                        ("\n\t".join(recognized_datasets))
                 print(msg, file=sys.stderr)
-                
+
                 self.random_utterance_button.setDisabled(True)
                 self.random_speaker_button.setDisabled(True)
                 self.random_dataset_button.setDisabled(True)
@@ -289,15 +289,15 @@ class UI(QDialog):
                 self.dataset_box.setDisabled(True)
                 self.browser_load_button.setDisabled(True)
                 self.auto_next_checkbox.setDisabled(True)
-                return 
+                return
             self.repopulate_box(self.dataset_box, datasets, random)
-    
+
         # Select a random speaker
         if level <= 1:
             speakers_root = datasets_root.joinpath(self.current_dataset_name)
             speaker_names = [d.stem for d in speakers_root.glob("*") if d.is_dir()]
             self.repopulate_box(self.speaker_box, speaker_names, random)
-    
+
         # Select a random utterance
         if level <= 2:
             utterances_root = datasets_root.joinpath(
@@ -306,7 +306,7 @@ class UI(QDialog):
             )
             utterances = []
             for extension in ['mp3', 'flac', 'wav', 'm4a']:
-                utterances.extend(Path(utterances_root).glob("**/*.%s" % extension))
+                utterances.extend(Path(utterances_root).glob(f"**/*.{extension}"))
             utterances = [fpath.relative_to(utterances_root) for fpath in utterances]
             self.repopulate_box(self.utterance_box, utterances, random)
             
@@ -338,27 +338,27 @@ class UI(QDialog):
                         vocoder_models_dir: Path, extractor_models_dir: Path, convertor_models_dir: Path, vc_mode: bool):
         # Encoder
         encoder_fpaths = list(encoder_models_dir.glob("*.pt"))
-        if len(encoder_fpaths) == 0:
-            raise Exception("No encoder models found in %s" % encoder_models_dir)
+        if not encoder_fpaths:
+            raise Exception(f"No encoder models found in {encoder_models_dir}")
         self.repopulate_box(self.encoder_box, [(f.stem, f) for f in encoder_fpaths])
-        
+
         if vc_mode:
             # Extractor
             extractor_fpaths = list(extractor_models_dir.glob("*.pt"))
-            if len(extractor_fpaths) == 0:
-                self.log("No extractor models found in %s" % extractor_fpaths)
+            if not extractor_fpaths:
+                self.log(f"No extractor models found in {extractor_fpaths}")
             self.repopulate_box(self.extractor_box, [(f.stem, f) for f in extractor_fpaths])
-            
+
             # Convertor
             convertor_fpaths = list(convertor_models_dir.glob("*.pth"))
-            if len(convertor_fpaths) == 0:
-                self.log("No convertor models found in %s" % convertor_fpaths)
+            if not convertor_fpaths:
+                self.log(f"No convertor models found in {convertor_fpaths}")
             self.repopulate_box(self.convertor_box, [(f.stem, f) for f in convertor_fpaths])
         else:
             # Synthesizer
             synthesizer_fpaths = list(synthesizer_models_dir.glob("**/*.pt"))
-            if len(synthesizer_fpaths) == 0:
-                raise Exception("No synthesizer models found in %s" % synthesizer_models_dir)
+            if not synthesizer_fpaths:
+                raise Exception(f"No synthesizer models found in {synthesizer_models_dir}")
             self.repopulate_box(self.synthesizer_box, [(f.stem, f) for f in synthesizer_fpaths])
 
         # Vocoder

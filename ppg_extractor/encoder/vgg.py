@@ -52,10 +52,9 @@ class VGG2L(torch.nn.Module):
 
         if x_mask is None:
             return x, None
-        else:
-            x_mask = self.create_new_mask(x_mask, x)
+        x_mask = self.create_new_mask(x_mask, x)
 
-            return x, x_mask
+        return x, x_mask
 
     def create_new_mask(self, x_mask, x):
         """Create a subsampled version of x_mask.

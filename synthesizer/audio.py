@@ -18,14 +18,10 @@ def save_wavenet_wav(wav, path, sr):
     sf.write(path, wav.astype(np.float32), sr)
 
 def preemphasis(wav, k, preemphasize=True):
-    if preemphasize:
-        return signal.lfilter([1, -k], [1], wav)
-    return wav
+    return signal.lfilter([1, -k], [1], wav) if preemphasize else wav
 
 def inv_preemphasis(wav, k, inv_preemphasize=True):
-    if inv_preemphasize:
-        return signal.lfilter([1], [1, -k], wav)
-    return wav
+    return signal.lfilter([1], [1, -k], wav) if inv_preemphasize else wav
 
 #From https://github.com/r9y9/wavenet_vocoder/blob/master/audio.py
 def start_and_end_indices(quantized, silence_threshold=2):
@@ -70,16 +66,15 @@ def inv_linear_spectrogram(linear_spectrogram, hparams):
         D = _denormalize(linear_spectrogram, hparams)
     else:
         D = linear_spectrogram
-    
+
     S = _db_to_amp(D + hparams.ref_level_db) #Convert back to linear
-    
-    if hparams.use_lws:
-        processor = _lws_processor(hparams)
-        D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
-        y = processor.istft(D).astype(np.float32)
-        return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
-    else:
+
+    if not hparams.use_lws:
         return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis, hparams.preemphasize)
+    processor = _lws_processor(hparams)
+    D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
+    y = processor.istft(D).astype(np.float32)
+    return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
 
 def inv_mel_spectrogram(mel_spectrogram, hparams):
     """Converts mel spectrogram to waveform using librosa"""
@@ -87,16 +82,15 @@ def inv_mel_spectrogram(mel_spectrogram, hparams):
         D = _denormalize(mel_spectrogram, hparams)
     else:
         D = mel_spectrogram
-    
+
     S = _mel_to_linear(_db_to_amp(D + hparams.ref_level_db), hparams)  # Convert back to linear
-    
-    if hparams.use_lws:
-        processor = _lws_processor(hparams)
-        D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
-        y = processor.istft(D).astype(np.float32)
-        return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
-    else:
+
+    if not hparams.use_lws:
         return inv_preemphasis(_griffin_lim(S ** hparams.power, hparams), hparams.preemphasis, hparams.preemphasize)
+    processor = _lws_processor(hparams)
+    D = processor.run_lws(S.astype(np.float64).T ** hparams.power)
+    y = processor.istft(D).astype(np.float32)
+    return inv_preemphasis(y, hparams.preemphasis, hparams.preemphasize)
 
 def _lws_processor(hparams):
     import lws
@@ -109,7 +103,7 @@ def _griffin_lim(S, hparams):
     angles = np.exp(2j * np.pi * np.random.rand(*S.shape))
     S_complex = np.abs(S).astype(np.complex)
     y = _istft(S_complex * angles, hparams)
-    for i in range(hparams.griffin_lim_iters):
+    for _ in range(hparams.griffin_lim_iters):
         angles = np.exp(1j * np.angle(_stft(y, hparams)))
         y = _istft(S_complex * angles, hparams)
     return y
@@ -129,11 +123,11 @@ def num_frames(length, fsize, fshift):
     """Compute number of time frames of spectrogram
     """
     pad = (fsize - fshift)
-    if length % fshift == 0:
-        M = (length + pad * 2 - fsize) // fshift + 1
-    else:
-        M = (length + pad * 2 - fsize) // fshift + 2
-    return M
+    return (
+        (length + pad * 2 - fsize) // fshift + 1
+        if length % fshift == 0
+        else (length + pad * 2 - fsize) // fshift + 2
+    )
 
 
 def pad_lr(x, fsize, fshift):

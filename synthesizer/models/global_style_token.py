@@ -23,9 +23,7 @@ class GlobalStyleToken(nn.Module):
         # concat speaker_embedding according to https://github.com/mozilla/TTS/blob/master/TTS/tts/layers/gst_layers.py
         if hparams.use_ser_for_gst and speaker_embedding is not None:
             enc_out = torch.cat([enc_out, speaker_embedding], dim=-1)
-        style_embed = self.stl(enc_out)
-
-        return style_embed
+        return self.stl(enc_out)
 
 
 class ReferenceEncoder(nn.Module):
@@ -71,7 +69,7 @@ class ReferenceEncoder(nn.Module):
         return out.squeeze(0)
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
-        for i in range(n_convs):
+        for _ in range(n_convs):
             L = (L - kernel_size + 2 * pad) // stride + 1
         return L
 
@@ -98,9 +96,7 @@ class STL(nn.Module):
         N = inputs.size(0)
         query = inputs.unsqueeze(1)  # [N, 1, E//2]
         keys = torch.tanh(self.embed).unsqueeze(0).expand(N, -1, -1)  # [N, token_num, E // num_heads]
-        style_embed = self.attention(query, keys)
-
-        return style_embed
+        return self.attention(query, keys)
 
 
 class MultiHeadAttention(nn.Module):
